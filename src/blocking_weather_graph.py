@@ -18,13 +18,15 @@ class BlockingWeatherGraph(MultiSinkSrcDiGraph):
 
         if type(blocking_prob) is int or type(blocking_prob) is float:
             # set all edges to have the same blocking probability
-            self.blocking_probs = {e: blocking_prob for e in self.edges}
+            for e in self.edges:
+                self.edges[e]["blocking_prob"] = blocking_prob
         else:
-            self.blocking_probs = blocking_prob
+            for e in self.edges:
+                self.edges[e]["blocking_prob"] = blocking_prob[e]
     
     def get_max_flow(self, flow_func=nx.algorithms.flow.preflow_push):
         # remove edges with probability
-        removed_edges = [e for e in self.edges(data=True) if rand.random() < self.blocking_probs[e[:2]]]
+        removed_edges = [e for e in self.edges(data=True) if rand.random() < e[2]["blocking_prob"]]
         self.remove_edges_from(removed_edges)
 
         # remove isolated nodes (no in or out edges)

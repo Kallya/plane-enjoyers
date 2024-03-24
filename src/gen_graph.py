@@ -2,7 +2,7 @@ from pynetgen import netgen_generate
 from base_multi_sink_source import MultiSinkSrcDiGraph
 import networkx as nx
 
-def gen_graph(graph_class=MultiSinkSrcDiGraph, **kwargs):
+def gen_graph(graph_class=MultiSinkSrcDiGraph, graph_attributes={}, **kwargs):
     """
     Generate a random graph using pynetgen and return it as a networkx graph
 
@@ -38,6 +38,6 @@ def gen_graph(graph_class=MultiSinkSrcDiGraph, **kwargs):
         elif G.out_degree(n) == 0:
             sinks.append(n)
     
-    return graph_class(graph, sources, sinks, **kwargs)
+    return graph_class(graph, sources, sinks, **graph_attributes)
     
 
