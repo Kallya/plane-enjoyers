@@ -9,8 +9,17 @@ def draw(G, attribute="capacity"):
     nx.draw(G, pos=pos, with_labels=True, node_color="lightblue", node_size=500, edge_color="gray", font_weight="bold")
     nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=nx.get_edge_attributes(G, attribute))
 
+def calc_max_flow_vals(G, sinks):
+    # compute max flow vals for each sink
+    max_flow_vals = {sink: 0 for sink in sinks}
+    for _, v, attr in G.edges(data=True):
+        if v in sinks:
+            max_flow_vals[v] += attr["flow"]
+
+    return max_flow_vals
+
 ###################### Base max flow ######################
-def get_max_flow(G, sources, sinks):
+def get_max_flow(G, sources, sinks, max_flow_func=nx.maximum_flow):
     """
     Base multi sink/source max flow where each edge has a capacity
     Returns the max flow graph
@@ -28,7 +37,10 @@ def get_max_flow(G, sources, sinks):
         # infinity capacity
         G.add_edge(sink, "sink")
     
-    _, max_flow = nx.maximum_flow(G, "source", "sink")
+    if max_flow_func == nx.maximum_flow:
+        _, max_flow = max_flow_func(G, "source", "sink")
+    else:
+        max_flow = max_flow_func(G, "source", "sink")
 
     for i in max_flow:
         for j in max_flow[i]:
@@ -39,16 +51,15 @@ def get_max_flow(G, sources, sinks):
 
     return G
 
-def calc_max_flow_vals(G, sinks):
-    # compute max flow vals for each sink
-    max_flow_vals = {sink: 0 for sink in sinks}
-    for _, v, attr in G.edges(data=True):
-        if v in sinks:
-            max_flow_vals[v] += attr["flow"]
+def get_max_flow_with_v_capacity(G, sources, sinks, max_flow_func=nx.maximum_flow):
+    """
+    Get max flow of a network with vertex capacities
 
-    return max_flow_vals
+    Must have "capacity" defined for each vertex in G
 
-def get_max_flow_with_v_capacity(G, sources, sinks):
+    Ensure "weight" is defined in G for each edge if calculating min cost max flow.
+    In this case max_flow_func=nx.max_cost_min_flow.
+    """
     G_c = G.copy()
     aux_sources = [n + "_in" for n in sources]
     aux_sinks = [n + "_out" for n in sinks]
@@ -60,10 +71,10 @@ def get_max_flow_with_v_capacity(G, sources, sinks):
 
         # connect each incoming edge to the 'in' vertex
         for u, _, attr in G_c.in_edges(n, data=True):
-            G_c.add_edge(u, n + "_in", capacity=attr["capacity"])
+            G_c.add_edge(u, n + "_in", **attr)
         # connect each outgoing edge to the 'out' vertex
         for _, v, attr in G_c.out_edges(n, data=True):
-            G_c.add_edge(n + "_out", v, capacity=attr["capacity"])
+            G_c.add_edge(n + "_out", v, **attr)
         
         # connect the 'in' vertex to the 'out' vertex with the vertex
         # capacity as the capacity of the edge
@@ -72,7 +83,7 @@ def get_max_flow_with_v_capacity(G, sources, sinks):
         # remove the original vertex
         G_c.remove_node(n)
     
-    G_c = get_max_flow(G_c, aux_sources, aux_sinks)
+    G_c = get_max_flow(G_c, aux_sources, aux_sinks, max_flow_func)
 
     for n in G.nodes:
         G_c.add_node(n)

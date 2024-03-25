@@ -1,5 +1,4 @@
 from pynetgen import netgen_generate
-from base_multi_sink_source import MultiSinkSrcDiGraph
 import networkx as nx
 
 def gen_graph_max_flow(**kwargs):
@@ -68,10 +67,10 @@ def gen_graph_min_cost(**kwargs):
         
         graph = {}
         while l:
-            _, u, v, _, capacity, _ = l.split()
+            _, u, v, _, capacity, cost = l.split()
             if u not in graph:
                 graph[u] = {}
-            graph[u][v] = {"capacity": int(capacity)}
+            graph[u][v] = {"capacity": int(capacity), "cost": int(cost)}
             l = f.readline()
     
     G = nx.DiGraph(graph)
