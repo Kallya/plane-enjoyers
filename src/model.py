@@ -1,4 +1,5 @@
 import networkx as nx
+import random as rand
 
 ###################### Helpers ######################
 def draw(G, attribute="capacity"):
@@ -40,9 +41,9 @@ def get_max_flow(G, sources, sinks):
 def calc_max_flow_vals(G, sinks):
     # compute max flow vals for each sink
     max_flow_vals = {sink: 0 for sink in sinks}
-    for e in G.edges(data=True):
-        if e[1] in sinks:
-            max_flow_vals[e[1]] += e[2]["flow"]
+    for _, v, attr in G.edges(data=True):
+        if v in sinks:
+            max_flow_vals[v] += attr["flow"]
 
     return max_flow_vals
 
@@ -57,11 +58,11 @@ def get_max_flow_with_v_capacity(G, sources, sinks):
         G_c.add_node(n + "_out")
 
         # connect each incoming edge to the 'in' vertex
-        for e in G_c.in_edges(n, data=True):
-            G_c.add_edge(e[0], n + "_in", capacity=e[2]["capacity"])
+        for u, _, attr in G_c.in_edges(n, data=True):
+            G_c.add_edge(u, n + "_in", capacity=attr["capacity"])
         # connect each outgoing edge to the 'out' vertex
-        for e in G_c.out_edges(n, data=True):
-            G_c.add_edge(n + "_out", e[1], capacity=e[2]["capacity"])
+        for _, v, attr in G_c.out_edges(n, data=True):
+            G_c.add_edge(n + "_out", v, capacity=attr["capacity"])
         
         # connect the 'in' vertex to the 'out' vertex with the vertex
         # capacity as the capacity of the edge
@@ -81,13 +82,18 @@ def get_max_flow_with_v_capacity(G, sources, sinks):
         G_c.remove_node(n + "_in")
         G_c.remove_node(n + "_out")
     
+    # cleanup 
+    G_c.remove_edges_from([e for e in G_c.edges if G_c.edges[e]["flow"] == 0])
+    G_c.remove_nodes_from(list(nx.isolates(G_c))) 
+
     return G_c
 
-def get_base_max_flow(G, sources, sinks):
+def get_min_cost_flow(G, sources, sinks):
     """
-    Get max flow taking into account vertex capacities and demand
+    Get satisfying flow taking into account vertex capacities and demand
 
-    G should define vertex capacity and demand, and edge capacity
+    G should define vertex capacity and demand (we leave cost constant for our
+    purposes for now), and edge capacity
 
     sources and sinks should both be sets
 
@@ -109,11 +115,11 @@ def get_base_max_flow(G, sources, sinks):
             G_c.add_node(n + "_out")
 
         # connect each incoming edge to the 'in' vertex
-        for e in G_c.in_edges(n, data=True):
-            G_c.add_edge(e[0], n + "_in", **e[2])
+        for u, _, attr in G_c.in_edges(n, data=True):
+            G_c.add_edge(u, n + "_in", **attr)
         # connect each outgoing edge to the 'out' vertex
         for e in G_c.out_edges(n, data=True):
-            G_c.add_edge(n + "_out", e[1], **e[2])
+            G_c.add_edge(n + "_out", e[1], **attr)
         
         # connect the 'in' vertex to the 'out' vertex with the vertex
         # capacity as the capacity of the edge
@@ -140,3 +146,31 @@ def get_base_max_flow(G, sources, sinks):
         G_c.remove_nodes_from([n + "_in", n + "_out"])
     
     return G_c
+
+############ Probabilistic edge removal (weather blocking) ##############
+def get_probabilistic_blocking_max_flow(G, sources, sink, base_problem_func):
+    """
+    Multi source and sink with each edge having a probability of being blocked
+    (ie. unpassable/unusable) when the max flow is retrieved or computed
+    
+    Edges in G must have an attribute "blocking_prob" which is in [0, 1]
+    indicating the probability an edge is blocked (ie. removed) for this max 
+    flow calculation
+    """
+
+    G = G.copy()
+
+    # remove edges with probability
+    removed_edges = [e for e in G.edges(data=True) if rand.random() < e[2]["blocking_prob"]]
+    G.remove_edges_from(removed_edges)
+
+    # remove isolated nodes (no in or out edges)
+    removed_nodes = nx.isolates(G)
+    G.remove_nodes_from(list(removed_nodes))
+
+    sources = set(sources) - set(removed_nodes)
+    sinks = set(sink) - set(removed_nodes)
+
+    G = base_problem_func(G, sources, sinks)
+
+    return G
