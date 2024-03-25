@@ -1,5 +1,6 @@
 import networkx as nx
 import random as rand
+from math import ceil
 
 ###################### Helpers ######################
 def draw(G, attribute="capacity"):
@@ -156,6 +157,9 @@ def get_probabilistic_blocking_max_flow(G, sources, sink, base_problem_func):
     Edges in G must have an attribute "blocking_prob" which is in [0, 1]
     indicating the probability an edge is blocked (ie. removed) for this max 
     flow calculation
+
+    base_problem_func is the function used to calculate the max flow (current
+    options are limited to get_max_flow and get_max_flow_with_v_capacity)
     """
 
     G = G.copy()
@@ -171,6 +175,23 @@ def get_probabilistic_blocking_max_flow(G, sources, sink, base_problem_func):
     sources = set(sources) - set(removed_nodes)
     sinks = set(sink) - set(removed_nodes)
 
-    G = base_problem_func(G, sources, sinks)
+    return base_problem_func(G, sources, sinks)
 
-    return G
+############# Probabilistic capacity reduction (weather obstruction) ###########
+def get_probabilistic_slowing_max_flow(G, sources, sink, 
+                                       base_problem_func=get_max_flow_with_v_capacity,
+                                       slowing_factor=0.5):
+    """
+    Multi source and sink with each edge having a probability of being slowed
+    (e.g. due to fog, limited visibility etc.)
+
+    The higher the slowing factor, the more the capacity is reduced
+    """
+    G = G.copy()
+
+    for u, v, attr in G.edges(data=True):
+        if rand.random() < attr["slowing_prob"]:
+            # round up so we don't have 0 capacity if not intended
+            G.edges[u, v]["capacity"] = int(ceil(G.edges[u, v]["capacity"] * (1-slowing_factor)))
+    
+    return base_problem_func(G, sources, sink)
