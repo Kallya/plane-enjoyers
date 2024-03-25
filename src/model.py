@@ -197,6 +197,8 @@ def get_probabilistic_slowing_max_flow(G, sources, sinks,
     Multi source and sink with each edge having a probability of being slowed
     (e.g. due to fog, limited visibility etc.)
 
+    G must define "slowing_prob" for each edge
+
     The higher the slowing factor, the more the capacity is reduced
     """
     G = G.copy()
@@ -213,6 +215,8 @@ def get_probabilistic_v_blocking_max_flow(G, sources, sinks,
     """
     Multi source and sink with each vertex having a probability of being blocked
     (ie. all adjacent edges are impassable)
+
+    G must define "blocking_prob" for each vertex
     """
 
     G = G.copy()
