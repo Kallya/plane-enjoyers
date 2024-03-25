@@ -149,7 +149,8 @@ def get_min_cost_flow(G, sources, sinks):
     return G_c
 
 ############ Probabilistic edge removal (weather blocking) ##############
-def get_probabilistic_blocking_max_flow(G, sources, sink, base_problem_func):
+def get_probabilistic_blocking_max_flow(G, sources, sinks, 
+                                        base_problem_func=get_max_flow_with_v_capacity):
     """
     Multi source and sink with each edge having a probability of being blocked
     (ie. unpassable/unusable) when the max flow is retrieved or computed
@@ -173,12 +174,12 @@ def get_probabilistic_blocking_max_flow(G, sources, sink, base_problem_func):
     G.remove_nodes_from(list(removed_nodes))
 
     sources = set(sources) - set(removed_nodes)
-    sinks = set(sink) - set(removed_nodes)
+    sinks = set(sinks) - set(removed_nodes)
 
     return base_problem_func(G, sources, sinks)
 
 ############# Probabilistic capacity reduction (weather obstruction) ###########
-def get_probabilistic_slowing_max_flow(G, sources, sink, 
+def get_probabilistic_slowing_max_flow(G, sources, sinks, 
                                        base_problem_func=get_max_flow_with_v_capacity,
                                        slowing_factor=0.5):
     """
@@ -194,4 +195,23 @@ def get_probabilistic_slowing_max_flow(G, sources, sink,
             # round up so we don't have 0 capacity if not intended
             G.edges[u, v]["capacity"] = int(ceil(G.edges[u, v]["capacity"] * (1-slowing_factor)))
     
-    return base_problem_func(G, sources, sink)
+    return base_problem_func(G, sources, sinks)
+
+def get_probabilistic_v_blocking_max_flow(G, sources, sinks, 
+                                          base_problem_func=get_max_flow_with_v_capacity):
+    """
+    Multi source and sink with each vertex having a probability of being blocked
+    (ie. all adjacent edges are impassable)
+    """
+
+    G = G.copy()
+
+    removed_nodes = [n for n in G.nodes if rand.random() < G.nodes[n]["blocking_prob"]]
+    G.remove_nodes_from(removed_nodes)
+
+    sources = set(sources) - set(removed_nodes)
+    sinks = set(sinks) - set(removed_nodes)
+
+    # @audit do we want to reroute if some path is lost?
+    
+    return base_problem_func(G, sources, sinks)
