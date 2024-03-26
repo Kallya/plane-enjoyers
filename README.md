@@ -19,6 +19,8 @@ $ (.venv) pip install -r requirements.txt
 
 ## Examples
 
+*Note: if using single source/sinks, you need to convert to an iterable for input*
+
 ### Imports
 ```python3
 from gen_graph import gen_graph_min_cost, gen_graph_max_flow

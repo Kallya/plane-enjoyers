@@ -11,10 +11,9 @@ def draw(G, attribute="capacity"):
 
 def calc_max_flow_vals(G, sinks):
     # compute max flow vals for each sink
-    max_flow_vals = {sink: 0 for sink in sinks}
-    for _, v, attr in G.edges(data=True):
-        if v in sinks:
-            max_flow_vals[v] += attr["flow"]
+    max_flow_vals = {}
+    for n in sinks:
+        max_flow_vals[n] = sum([attr["flow"] for _, _, attr in G.in_edges(n, data=True)])
 
     return max_flow_vals
 
@@ -36,7 +35,7 @@ def get_max_flow(G, sources, sinks, max_flow_func=nx.maximum_flow):
     for sink in sinks:
         # infinity capacity
         G.add_edge(sink, "sink")
-    
+
     if max_flow_func == nx.maximum_flow:
         _, max_flow = max_flow_func(G, "source", "sink")
     else:
@@ -60,9 +59,10 @@ def get_max_flow_with_v_capacity(G, sources, sinks, max_flow_func=nx.maximum_flo
     Ensure "weight" is defined in G for each edge if calculating min cost max flow.
     In this case max_flow_func=nx.max_cost_min_flow.
     """
-    G_c = G.copy()
     aux_sources = [n + "_in" for n in sources]
     aux_sinks = [n + "_out" for n in sinks]
+
+    G_c = G.copy()
 
     # add vertex capacities to the graph
     for n in G.nodes:
@@ -111,7 +111,6 @@ def get_min_cost_flow(G, sources, sinks):
 
     demand for a node is negative if they are a source, otherwise positive for a sink 
     """
-
     G_c = G.copy()
 
     # construct the aux graph over which we calculate max flow
