@@ -31,7 +31,7 @@ def calc_flow_centrality(G, sources, sinks, flow_func):
     for e in edge_flow_sums:
         edge_flow_sums[e] /= aggregate_max_flow
 
-    return 
+    return edge_flow_sums
     
 
 def rank_flow_centrality(index_mapping):
@@ -42,3 +42,89 @@ def rank_flow_centrality(index_mapping):
     """
 
     return sorted(index_mapping.items(), key=lambda x: x[1], reverse=True)
+
+# @audit this seems to be buggy (doesn't run the last iteration), also doesn't seem to be really useful in increasing max flow
+def path_reversal(G):
+    """
+    Minimises the outdegree of the nodes in the graph G by reversing paths
+
+    G should be the subgraph of the flow network with the source and sinks removed
+
+    Original algo: https://catalog.lib.kyushu-u.ac.jp/opac_download_md/14869/IJFCS-revision.pdf
+
+    We assume G is simple and directed
+
+    Returns a new graph with the old weights and new orientation
+    """
+
+    # we should already have a random orientation
+    G = G.copy()
+
+    outdegree = {n: d for n, d in G.out_degree()}
+    pred = {n: -1 for n in G.nodes()}
+    visited = {n: False for n in G.nodes()}
+
+    def dfs_setup():
+        for n in pred:
+            pred[n] = -1
+            visited[n] = False
+
+    while True:
+        # find a node with max outdegree
+        max_outdegree = max(outdegree.values())
+
+        # we can't find any more reversible paths since the ending node
+        # would have to have negative outdegree
+        if max_outdegree <= 1:
+            break
+
+        def dfs(u, v):
+            pred[v] = u 
+            if outdegree[v] <= max_outdegree - 2:
+                return v
+            visited[v] = True
+
+            for n in G.neighbors(v):
+                if visited[n]:
+                    continue
+                res = dfs(v, n)
+                if res:
+                    return res
+            # reset the predecessor so we don't end up with weird cycles
+            pred[v] = -1            
+
+            return None
+
+        did_reverse = False
+        for n in outdegree:
+            if outdegree[n] != max_outdegree:
+                continue
+
+            dfs_setup()
+            v = dfs(-1, n)
+
+            # stop if no nodes with low enough outdegree
+            # (ie. all reachable nodes have outdegree >= max_outdegree - 1)
+            if v is None:
+                continue
+
+            # flag that there was reversal for one of the max outdegree nodes 
+            did_reverse = True
+
+            # outdegree of end node increases since we're reversing away from it
+            # outdegree of every intermediate node doesn't change
+            outdegree[v] += 1
+            outdegree[n] -= 1
+
+            # trace the path and reverse the edges
+            while pred[v] != -1:
+                attr = G[pred[v]][v]
+                G.remove_edge(pred[v], v)
+                G.add_edge(v, pred[v], **attr)
+                v = pred[v]
+        
+        # if there were no reversals, then we can't find any more
+        if not did_reverse:
+            break
+    
+    return G
