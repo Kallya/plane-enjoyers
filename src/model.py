@@ -17,6 +17,12 @@ def calc_max_flow_vals(G, sinks):
 
     return max_flow_vals
 
+def clean_graph(G):
+    # remove edges with 0 flow
+    G.remove_edges_from([e for e in G.edges if G.edges[e]["flow"] == 0])
+    # remove isolated vertices (those with no edges incident on them)
+    G.remove_nodes_from(list(nx.isolates(G))) 
+
 ###################### Base max flow ######################
 def get_max_flow(G, sources, sinks, max_flow_func=nx.maximum_flow):
     """
@@ -95,9 +101,8 @@ def get_max_flow_with_v_capacity(G, sources, sinks, max_flow_func=nx.maximum_flo
         G_c.remove_node(n + "_out")
     
     # cleanup 
-    G_c.remove_edges_from([e for e in G_c.edges if G_c.edges[e]["flow"] == 0])
-    G_c.remove_nodes_from(list(nx.isolates(G_c))) 
-
+    clean_graph(G_c)
+    
     return G_c
 
 def get_min_cost_flow(G, sources, sinks):
