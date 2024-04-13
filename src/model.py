@@ -234,3 +234,31 @@ def get_probabilistic_v_blocking_max_flow(G, sources, sinks,
     # @audit do we want to reroute if some path is lost?
     
     return base_problem_func(G, sources, sinks)
+
+
+# Generalised probabilistic max flow approximation
+def get_expected_capacity_graph(G):
+    """
+    Gets modified G where capacities are set to their expected capacity
+    taking into account their slowing factor and probability
+
+    G must have edges each with attribute "slowing_prob", "slowing_factor", 
+    and capacity
+    """
+    G = G.copy()
+    for u, v, attr in G.edges(data=True):
+        # expected capacity = slowing_prob * (1 - slowing_factor) * capacity + capacity * (1 - slowing_prob)
+        G.edges[(u, v)]["capacity"] = \
+            attr["slowing_prob"] * (1 - attr["slowing_factor"]) * attr["capacity"] \
+            + attr["capacity"] * (1 - attr["slowing_prob"])
+    
+    return G
+
+def get_expected_max_flow(G, sources, sinks, flow_func):
+    """
+    Calculates the max flow of G with edge capacities set to the expected value
+    """
+    G = get_expected_capacity_graph(G)
+    G = flow_func(G, sources, sinks)
+
+    return calc_max_flow_vals(G, sinks)
