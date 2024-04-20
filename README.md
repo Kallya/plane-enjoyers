@@ -84,7 +84,7 @@ model.set_random_probabilistic_attrs(G)
 ```python3
 orig_max_flow_val, R  =  model.get_intermediate_residual_graph(G, sources, sinks, nx.flow.preflow_push)
 ```
-4. Apply the algorithm to get the capacity changes and the new modified residual graph using *algorithm::distribute_budget* or *algorithm::distribute_budget_fair* (you can use different *edge_select_func* and *edge_func* - see the comments for more details). Note that the original residual graph is not modified, so you can reuse the original intermediate residual graph (ie. start from this step for multiple calculations).
+4. Apply the algorithm to get the capacity changes and the new modified residual graph using *algorithm::distribute_budget* or *algorithm::distribute_budget_fair* (you can use different *edge_select_func* and *edge_func* - see the comments for more details). Note that the original residual graph is not modified.
 ```python3
 dist, R_c  =  algorithm.distribute_budget_fair(R, 1000, edge_func=te.get_guaranteed_edges, edge_select_func=ag.get_edge_and_cap_inc_by_ev)
 ```
@@ -94,6 +94,14 @@ model.clean_residual_graph(R_c)
 ```
 6. Calculate the probabilistic max flow value on the cleaned residual graph using *model::get_probabilistic_slowing_max_flow*.
 ```python3
-new_max_flow_val = md.get_probabilistic_slowing_max_flow(R_c, sources, sinks, flow_func=md.get_max_flow_val)
+new_max_flow_val = model.get_probabilistic_slowing_max_flow(R_c, sources, sinks, flow_func=md.get_max_flow_val)
 ```
 7. Record the difference from the original to see the approximate increase (and repeat this calculation to converge on a more accurate approximation).
+
+Alternative (from replacing from step 5)
+
+You can just apply the capacity increases in *dist* to the original graph and average probabilistic max flow value over the new graph.
+```python3
+for e in dist:
+	G.edges[e]["capacity"] += dist[e]
+```
