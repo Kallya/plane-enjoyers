@@ -53,6 +53,7 @@ def get_max_flow(G, sources, sinks, max_flow_func=nx.maximum_flow):
     
     G = nx.DiGraph(max_flow)
     G.remove_nodes_from(["source", "sink"])
+    clean_graph(G)
 
     return G
 
@@ -163,56 +164,22 @@ def get_min_cost_flow(G, sources, sinks):
     
     return G_c
 
-############ Probabilistic edge removal (weather blocking) ##############
-def get_probabilistic_blocking_max_flow(G, sources, sinks, 
-                                        base_problem_func=get_max_flow_with_v_capacity):
-    """
-    Multi source and sink with each edge having a probability of being blocked
-    (ie. unpassable/unusable) when the max flow is retrieved or computed
-    
-    Edges in G must have an attribute "blocking_prob" which is in [0, 1]
-    indicating the probability an edge is blocked (ie. removed) for this max 
-    flow calculation
-
-    base_problem_func is the function used to calculate the max flow (current
-    options are limited to get_max_flow and get_max_flow_with_v_capacity)
-    """
-
-    G = G.copy()
-
-    # remove edges with probability
-    removed_edges = [e for e in G.edges(data=True) if rand.random() < e[2]["blocking_prob"]]
-    G.remove_edges_from(removed_edges)
-
-    # remove isolated nodes (no in or out edges)
-    removed_nodes = nx.isolates(G)
-    G.remove_nodes_from(list(removed_nodes))
-
-    sources = set(sources) - set(removed_nodes)
-    sinks = set(sinks) - set(removed_nodes)
-
-    return base_problem_func(G, sources, sinks)
-
 ############# Probabilistic capacity reduction (weather obstruction) ###########
-def get_probabilistic_slowing_max_flow(G, sources, sinks, 
-                                       base_problem_func=get_max_flow_with_v_capacity,
-                                       slowing_factor=0.5):
+def get_probabilistic_slowing_max_flow(G, sources, sinks, flow_func=get_max_flow):
     """
     Multi source and sink with each edge having a probability of being slowed
     (e.g. due to fog, limited visibility etc.)
 
-    G must define "slowing_prob" for each edge
-
-    The higher the slowing factor, the more the capacity is reduced
+    G must define "slowing_prob" and "slowing_factor" for each edge
     """
     G = G.copy()
 
     for u, v, attr in G.edges(data=True):
         if rand.random() < attr["slowing_prob"]:
             # round up so we don't have 0 capacity if not intended
-            G.edges[u, v]["capacity"] = int(ceil(G.edges[u, v]["capacity"] * (1-slowing_factor)))
+            G.edges[u, v]["capacity"] = int(ceil(attr["capacity"] * (1-attr["slowing_factor"])))
     
-    return base_problem_func(G, sources, sinks)
+    return flow_func(G, sources, sinks)
 
 def get_probabilistic_v_blocking_max_flow(G, sources, sinks, 
                                           base_problem_func=get_max_flow_with_v_capacity):
