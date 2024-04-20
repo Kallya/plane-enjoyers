@@ -32,6 +32,9 @@ def gen_graph_max_flow(**kwargs):
         elif G.out_degree(n) == 0:
             sinks.append(n)
     
+    nx.set_edge_attributes(G, 0, "slowing_prob")
+    nx.set_edge_attributes(G, 0, "slowing_factor")
+    
     return G, set(sources), set(sinks)
 
 def gen_graph_min_cost(**kwargs):

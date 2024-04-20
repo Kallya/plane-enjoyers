@@ -57,6 +57,28 @@ def get_max_flow(G, sources, sinks, max_flow_func=nx.maximum_flow):
 
     return G
 
+def get_max_flow_val(G, sources, sinks):
+    """
+    Base multi sink/source max flow where each edge has a capacity
+    Returns the max flow graph
+    """
+
+    G = G.copy() 
+    G.add_node("source")
+    G.add_node("sink")
+
+    for source in sources:
+        # infinite capacity
+        G.add_edge("source", source)
+
+    for sink in sinks:
+        # infinity capacity
+        G.add_edge(sink, "sink")
+
+    max_flow_val, _ = nx.maximum_flow(G, "source", "sink")
+    
+    return max_flow_val 
+
 def get_max_flow_with_v_capacity(G, sources, sinks, max_flow_func=nx.maximum_flow):
     """
     Get max flow of a network with vertex capacities
@@ -165,7 +187,7 @@ def get_min_cost_flow(G, sources, sinks):
     return G_c
 
 ############# Probabilistic capacity reduction (weather obstruction) ###########
-def get_probabilistic_slowing_max_flow(G, sources, sinks, flow_func=get_max_flow):
+def get_probabilistic_slowing_max_flow(G, sources, sinks, flow_func=get_max_flow_val):
     """
     Multi source and sink with each edge having a probability of being slowed
     (e.g. due to fog, limited visibility etc.)
@@ -221,7 +243,7 @@ def get_expected_capacity_graph(G):
     
     return G
 
-def get_expected_max_flow(G, sources, sinks, flow_func):
+def get_expected_max_flow(G, sources, sinks, flow_func=get_max_flow):
     """
     Calculates the max flow of G with edge capacities set to the expected value
     """
@@ -229,3 +251,45 @@ def get_expected_max_flow(G, sources, sinks, flow_func):
     G = flow_func(G, sources, sinks)
 
     return calc_max_flow_vals(G, sinks)
+
+def set_random_probabilistic_attrs(G, prob_range=(0, 1), factor_range=(0, 1)):
+    """
+    Sets random slowing probability and factor for each edge in G
+    """
+
+    for u, v in G.edges:
+        G.edges[(u, v)]["slowing_prob"] = rand.uniform(*prob_range)
+        G.edges[(u, v)]["slowing_factor"] = rand.uniform(*factor_range)
+
+def get_intermediate_residual_graph(G, sources, sinks, flow_func):
+    G = G.copy()
+
+    for s in sources:
+        G.add_edge("source", s, slowing_prob=0, slowing_factor=0)
+    for s in sinks:
+        G.add_edge(s, "sink", slowing_prob=0, slowing_factor=0)
+    
+    R = flow_func(G, "source", "sink")
+
+    nx.set_edge_attributes(R, 0, "slowing_prob")
+    nx.set_edge_attributes(R, 0, "slowing_factor")
+
+    for u, v in G.edges:
+        R[u][v]["slowing_prob"] = G[u][v]["slowing_prob"]
+        R[u][v]["slowing_factor"] = G[u][v]["slowing_factor"]
+
+    max_flow = 0
+    for n in R.neighbors("source"):
+        max_flow += R["source"][n]["flow"]
+    
+    return max_flow, R
+
+def clean_residual_graph(R):
+    R.remove_nodes_from(["source", "sink"])
+    edges = R.edges
+    R.remove_edges_from([(u, v) for u, v in R.edges if R[u][v]["flow"] <= 0 or R[u][v]["capacity"] == 0])
+    for u, v in list(R.edges):
+        if R[u][v]["flow"] <= 0:
+            R.remove_edge(u, v)
+        if R[u][v]["capacity"] == 0:
+            R.remove_edge(u, v)

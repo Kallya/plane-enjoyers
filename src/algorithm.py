@@ -2,10 +2,14 @@ import random
 import max_flow_increase_bfs as mf
 
 def get_random_edge(G, edges):
+    """Gets a random edge out of edges"""
+
     idx = random.randint(0, len(edges) - 1)
     return edges[idx]
 
 def get_highest_prob_edge(G, edges):
+    """Finds the edge with highest slowing probability out of edges"""
+
     max_prob = -1 
     max_edge = None
     for e in edges:
@@ -16,6 +20,8 @@ def get_highest_prob_edge(G, edges):
     return max_edge
 
 def get_lowest_prob_edge(G, edges):
+    """Finds the edge with lowest slowing probability out of edges"""
+
     min_prob = float("inf") 
     min_edge = None
     for e in edges:
@@ -26,11 +32,15 @@ def get_lowest_prob_edge(G, edges):
     return min_edge
 
 def ev(G, u, v):
+    """Expected value of edge (u, v) in graph G"""
+
     # capacity * (1 - slowing_prob) + capacity * slowing_prob * slowing_factor
     return int(G[u][v]["capacity"] * (1 - G[u][v]["slowing_prob"]) 
                + G[u][v]["capacity"] * G[u][v]["slowing_prob"] * G[u][v]["slowing_factor"])
 
 def get_highest_ev_edge(G, edges):
+    """Finds the edge with highest expected capacity out of edges"""
+
     max_ev = -1 
     max_edge = None
     for e in edges:
@@ -42,6 +52,8 @@ def get_highest_ev_edge(G, edges):
     return max_edge
 
 def get_lowest_ev_edge(G, edges):
+    """Finds the edge with lowest expected capacity out of edges"""
+
     min_ev = float("inf") 
     min_edge = None
     for e in edges:
@@ -52,9 +64,16 @@ def get_lowest_ev_edge(G, edges):
     
     return min_edge
 
-def distribute_budget(G, R, budget, edge_func, edge_select_func):
-    # edge_func gets all possible edges to consider
-    # edge_select_func selects out of edges returned by edge_func
+def distribute_budget(R, budget, edge_func, edge_select_func):
+    """ 
+    edge_func gets all possible edges to consider - can be 
+    get_lowest_ev_edge, get_highest_ev_edge, 
+    get_lowest_prob_edge, get_highest_prob_edge,
+
+    edge_select_func selects out of edges returned by edge_func - 
+    can be get_guaranteed_edges or get_min_cut_edges, though get_guaranteed_edges
+    should be default (it is better)
+    """
     R = R.copy()
     distribution = {}
 
@@ -74,9 +93,11 @@ def distribute_budget(G, R, budget, edge_func, edge_select_func):
         budget -= increase
         R[u][v]["capacity"] -= budget
     
-    return distribution
+    return distribution, R
 
 def get_edge_and_cap_inc_by_cap(R, edges):
+    """Gets the edge with the lowest capacity and the capacity of the next lowest capacity edge"""
+
     # get min capacity target edge and capacity of the next min capacity target edge
     min_cap1 = float("inf")
     min_cap2 = float("inf")
@@ -93,6 +114,8 @@ def get_edge_and_cap_inc_by_cap(R, edges):
     return min_e1, min_cap2
 
 def get_edge_and_cap_inc_by_ev(R, edges):
+    """Gets the edge with the lowest expected value and the capacity of the next lowest expected value edge"""
+
     # get min capacity target edge and capacity of the next min capacity target edge
     min_ev1 = float("inf")
     min_ev2 = float("inf")
@@ -108,7 +131,16 @@ def get_edge_and_cap_inc_by_ev(R, edges):
 
     return min_e1, min_ev2
 
-def distribute_budget_fair(G, R, budget, edge_func, edge_select_func):
+def distribute_budget_fair(R, budget, edge_func, edge_select_func):
+    """
+    edge_func gets all possible edges to consider - can be 
+    get_guaranteed_edges or get_min_cut_edges, though get_guaranteed_edges
+    should be default (it is better)
+
+    edge_select_func selects out of edges returned by edge_func -
+    can be get_edge_and_cap_inc_by_ev or get_edge_and_cap_inc_by_cap
+    """
+
     R = R.copy()
     distribution = {}
 
@@ -127,4 +159,4 @@ def distribute_budget_fair(G, R, budget, edge_func, edge_select_func):
         budget -= increase
         R[u][v]["capacity"] -= cap_inc - increase
     
-    return distribution
+    return distribution, R
