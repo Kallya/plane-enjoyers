@@ -1,4 +1,5 @@
 from collections import deque
+import networkx as nx
 
 def reachable_nodes(R, origin):
     visited = set()
