@@ -78,7 +78,11 @@ def distribute_budget(R, budget, edge_func, edge_select_func):
     distribution = {}
 
     while budget > 0:
-        u, v = edge_select_func(R, edge_func(R))
+        edges = edge_func(R)
+        # terminate early if we can't increase capacity anymore (does this even happen?)
+        if len(edges) == 0:
+            return distribution, R
+        u, v = edge_select_func(R, edges)
         R[u][v]["capacity"] += budget 
         # @audit need to change when fully implemented
         increase = mf.apply_max_flow_increase_bfs(R, "source", "sink")
@@ -113,24 +117,6 @@ def get_edge_and_cap_inc_by_cap(R, edges):
 
     return min_e1, min_cap2
 
-def get_edge_and_cap_inc_by_ev(R, edges):
-    """Gets the edge with the lowest expected value and the capacity of the next lowest expected value edge"""
-
-    # get min capacity target edge and capacity of the next min capacity target edge
-    min_ev1 = float("inf")
-    min_ev2 = float("inf")
-    min_e1 = None
-    for e in edges:
-        ev_val = ev(R, *e)
-        if ev_val < min_ev1:
-            min_ev2 = min_ev1
-            min_ev1 = ev_val
-            min_e1 = e
-        elif ev_val < min_ev2:
-            min_ev2 = ev_val 
-
-    return min_e1, min_ev2
-
 def distribute_budget_fair(R, budget, edge_func, edge_select_func):
     """
     edge_func gets all possible edges to consider - can be 
@@ -145,7 +131,10 @@ def distribute_budget_fair(R, budget, edge_func, edge_select_func):
     distribution = {}
 
     while budget > 0:
-        (u, v), cap = edge_select_func(R, edge_func(R)) 
+        edges = edge_func(R)
+        if len(edges) == 0:
+            return distribution, R
+        (u, v), cap = edge_select_func(R, edges) 
         cap_inc = min(budget, cap)
         R[u][v]["capacity"] += cap_inc
         # @audit need to change when fully implemented
