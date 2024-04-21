@@ -40,7 +40,7 @@ def get_guaranteed_edges(R):
     for u, v, attr in R.edges(data=True):
         if u == "source" or v == "sink" or u == "sink" or v == "source":
             continue
-        if u in s_reachable and v in t_reachable:
+        if u in s_reachable and v in t_reachable and R[u][v]["capacity"] > 0:
             edges.append((u, v))
 
     return edges

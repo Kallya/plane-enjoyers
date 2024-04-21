@@ -33,27 +33,25 @@ def test_one_graph(iterations, budget_increment, budget_min, budget_max, mincap,
     original_max = calc_prob_max_flow(G, sources, sinks, iterations)
 
     _, R = md.get_intermediate_residual_graph(G, sources, sinks, nx.flow.preflow_push)
-
+    budget = budget_min
     for edge_select_func in edge_select_funcs:
         res["results"][edge_select_func.__name__] = []
+        if edge_select_func == get_edge_and_cap_inc_by_cap:
+            # Use a different budget distribution function for this specific function
+            dist, R_c = distribute_budget_fair(R, budget, get_guaranteed_edges, edge_select_func)
+        else:
+            dist, R_c = distribute_budget(R, budget, get_guaranteed_edges, edge_select_func)
 
-        for budget in range(budget_min, budget_max + 1, budget_increment):
-            if edge_select_func == get_edge_and_cap_inc_by_cap:
-                # Use a different budget distribution function for this specific function
-                dist, R_c = distribute_budget_fair(R, budget, get_guaranteed_edges, edge_select_func)
-            else:
-                dist, R_c = distribute_budget(R, budget, get_guaranteed_edges, edge_select_func)
+        md.clean_residual_graph(R_c)
+        new_max = calc_prob_max_flow(R_c, sources, sinks, iterations)
+        improvement = new_max - original_max
 
-            md.clean_residual_graph(R_c)
-            new_max = calc_prob_max_flow(R_c, sources, sinks, iterations)
-            improvement = new_max - original_max
-
-            res["results"][edge_select_func.__name__].append({
-                'original_max_flow': original_max,
-                'budget': budget,
-                'new_max_flow': new_max,
-                'improvement': improvement,
-            })
+        res["results"][edge_select_func.__name__].append({
+            'original_max_flow': original_max,
+            'density': density,
+            'new_max_flow': new_max,
+            'improvement': improvement,
+        })
     
     return res
 
@@ -61,11 +59,12 @@ if __name__ == "__main__":
     res = test_one_graph(
         iterations=100,
         budget_increment=10,
-        budget_min= 10,
-        budget_max= 70,
+        budget_min= 50,
+        budget_max= 1100,
         mincap=5,
         maxcap=15,
-        nodes=15,
-        density=35,
+        nodes=20,
+        density=100
+        ,
     )
     pprint.pprint(res)
